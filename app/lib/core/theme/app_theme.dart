@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 // Bienvenue dans mes couleurs, typographies et styles communs
-// Zay vao madio
 abstract class AppColors {
   static const Color primary = Color(0xFFFF69B4); // Rose chaud
   static const Color secondary = Color(0xFF87CEFA); // Bleu ciel
@@ -26,22 +25,7 @@ abstract class AppColors {
   static const Color cardShadow = Color(0x14000000); // 8% noir
 }
 
-abstract class SystemeDesignBudgetFlow {
-  static const Color blancCarte = Colors.white;
-  static const Color bordureDouce = AppColors.divider;
-  static const Color rosePrincipal = AppColors.primary;
-  static const Color textePrincipal = AppColors.onBackground;
-  static const Color texteSecondaire = AppColors.disabled;
-  static const Color erreur = AppColors.error;
-
-  static const LinearGradient degradePrincipal = LinearGradient(
-    colors: <Color>[AppColors.primary, AppColors.tertiary],
-    begin: Alignment.centerLeft,
-    end: Alignment.centerRight,
-  );
-}
-
-// Tsy nety nivoka cute otrany sur figma dia mila ovaina
+/// Thème BudgetFlow – Material 3 "cute"
 class AppTheme {
   static ThemeData get light {
     final colorScheme = ColorScheme(

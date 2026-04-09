@@ -9,7 +9,7 @@ import '../../core/widgets/primary_button.dart';
 import '../../data/models/transaction.dart';
 import '../../data/models/category.dart';
 import '../../core/providers/repositories.dart';
-import '../../features/dashboard/dashboard_viewmodel.dart';
+import '../onboarding/dashboard/dashboard_viewmodel.dart';
 import 'transactions_viewmodel.dart';
 
 class AddTransactionScreen extends ConsumerStatefulWidget {
