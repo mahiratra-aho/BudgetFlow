@@ -1,4 +1,4 @@
-import 'package:bugdetflowapp/features/inscription/modeles/modele_inscription.dart';
+import 'package:budgetflow/features/break/inscription/modeles/modele_inscription.dart';
 import 'package:flutter/foundation.dart';
 
 // état d'inscription

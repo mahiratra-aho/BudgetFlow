@@ -1,5 +1,5 @@
-import 'package:bugdetflowapp/features/inscription/viewmodels/view_modele_inscription.dart';
-import 'package:bugdetflowapp/noyau/theme/design_budgetflow.dart';
+import 'package:budgetflow/core/theme/app_theme.dart';
+import 'package:budgetflow/features/break/inscription/viewmodels/view_modele_inscription.dart';
 import 'package:flutter/material.dart';
 
 // 1- écran d'inscription
@@ -155,9 +155,8 @@ class _EcranInscriptionState extends State<EcranInscription> {
             indice: 'Entre ton pseudo',
             controleur: _controllerPseudo,
             icone: Icons.person_outline_rounded,
-            texteErreur: _viewModele.afficherErreurs
-                ? _viewModele.erreurPseudo
-                : null,
+            texteErreur:
+                _viewModele.afficherErreurs ? _viewModele.erreurPseudo : null,
           ),
           const SizedBox(height: 16),
           _ChampSaisieInscription(
@@ -166,9 +165,8 @@ class _EcranInscriptionState extends State<EcranInscription> {
             controleur: _controllerEmail,
             typeClavier: TextInputType.emailAddress,
             icone: Icons.mail_outline_rounded,
-            texteErreur: _viewModele.afficherErreurs
-                ? _viewModele.erreurEmail
-                : null,
+            texteErreur:
+                _viewModele.afficherErreurs ? _viewModele.erreurEmail : null,
           ),
           const SizedBox(height: 16),
           _ChampSaisieInscription(
@@ -368,9 +366,9 @@ class _BoutonPrincipal extends StatelessWidget {
             child: Text(
               texte,
               style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                color: Colors.white,
-                fontSize: 18,
-              ),
+                    color: Colors.white,
+                    fontSize: 18,
+                  ),
             ),
           ),
         ),

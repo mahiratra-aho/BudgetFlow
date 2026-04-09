@@ -1,22 +1,15 @@
-import 'package:bugdetflowapp/features/inscription/view/view_inscription.dart';
-import 'package:bugdetflowapp/noyau/theme/design_budgetflow.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/date_symbol_data_local.dart';
+import 'app.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const BudgetFlowApp());
-}
+  await initializeDateFormatting('fr_FR', null);
 
-class BudgetFlowApp extends StatelessWidget {
-  const BudgetFlowApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'BudgetFlow',
-      debugShowCheckedModeBanner: false,
-      theme: SystemeDesignBudgetFlow.creerTheme(),
-      home: const EcranInscription(),
-    );
-  }
+  runApp(
+    const ProviderScope(
+      child: BudgetFlowApp(),
+    ),
+  );
 }
