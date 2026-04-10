@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../theme/app_theme.dart';
 import 'security_service.dart';
 
@@ -45,21 +47,112 @@ class _PinDialogState extends State<PinDialog> {
   bool _isConfirming = false;
   String? _errorMessage;
   bool _isLoading = false;
+  bool _isLocked = false;
+  Timer? _unlockTimer;
 
   static const int _pinLength = 4;
+  static const String _kFailedAttemptsKey = 'pin_failed_attempts';
+  static const String _kLockUntilKey = 'pin_lock_until_ms';
+  static const int _maxAttempts = 3;
+  static const int _lockDurationMs = 10000; // 10 secondes
 
-  void _onDigitTap(String digit) {
-    if (_digits.length >= _pinLength) return;
+  @override
+  void initState() {
+    super.initState();
+    if (!widget.confirmMode) {
+      _verifierEtatBlocage();
+    }
+  }
+
+  @override
+  void dispose() {
+    _unlockTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _verifierEtatBlocage() async {
+    final prefs = await SharedPreferences.getInstance();
+    final lockUntil = prefs.getInt(_kLockUntilKey) ?? 0;
+    final now = DateTime.now().millisecondsSinceEpoch;
+    if (lockUntil > now) {
+      final remaining = ((lockUntil - now) / 1000).ceil();
+      if (mounted) {
+        setState(() {
+          _isLocked = true;
+          _errorMessage = 'Trop de tentatives. Réessayez dans $remaining s.';
+        });
+        _planifierDeblocage(lockUntil - now, prefs);
+      }
+    }
+  }
+
+  void _planifierDeblocage(int delayMs, SharedPreferences prefs) {
+    _unlockTimer?.cancel();
+    _unlockTimer = Timer(Duration(milliseconds: delayMs), () async {
+      await _effacerBlocage(prefs);
+      if (mounted) {
+        setState(() {
+          _isLocked = false;
+          _errorMessage = null;
+        });
+      }
+    });
+  }
+
+  Future<void> _effacerBlocage(SharedPreferences prefs) async {
+    await prefs.remove(_kLockUntilKey);
+    await prefs.remove(_kFailedAttemptsKey);
+  }
+
+  Future<void> _gererTentativeEchouee() async {
+    final prefs = await SharedPreferences.getInstance();
+    final attempts = (prefs.getInt(_kFailedAttemptsKey) ?? 0) + 1;
+    await prefs.setInt(_kFailedAttemptsKey, attempts);
+
+    if (attempts >= _maxAttempts) {
+      final lockUntil = DateTime.now().millisecondsSinceEpoch + _lockDurationMs;
+      await prefs.setInt(_kLockUntilKey, lockUntil);
+      await prefs.remove(_kFailedAttemptsKey);
+      if (mounted) {
+        setState(() {
+          _isLocked = true;
+          _isLoading = false;
+          _digits.clear();
+          _errorMessage =
+              'Trop de tentatives. Réessayez dans ${_lockDurationMs ~/ 1000} s.';
+        });
+        _planifierDeblocage(_lockDurationMs, prefs);
+      }
+    } else {
+      final remaining = _maxAttempts - attempts;
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _digits.clear();
+          _errorMessage = 'PIN incorrect. $remaining tentative(s) restante(s).';
+        });
+      }
+    }
+  }
+
+  Future<void> _reinitialiserTentatives() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_kFailedAttemptsKey);
+    await prefs.remove(_kLockUntilKey);
+  }
+
+  void _ajouterChiffre(String digit) {
+    if (_digits.length >= _pinLength || _isLocked) return;
     setState(() {
       _digits.add(digit);
       _errorMessage = null;
     });
     if (_digits.length == _pinLength) {
-      _onPinComplete();
+      _traiterPinComplet();
     }
   }
 
-  void _onDelete() {
+  void _supprimerDernierChiffre() {
     if (_digits.isEmpty) return;
     setState(() {
       _digits.removeLast();
@@ -67,7 +160,7 @@ class _PinDialogState extends State<PinDialog> {
     });
   }
 
-  Future<void> _onPinComplete() async {
+  Future<void> _traiterPinComplet() async {
     final entered = _digits.join();
 
     if (widget.confirmMode) {
@@ -95,18 +188,16 @@ class _PinDialogState extends State<PinDialog> {
       return;
     }
 
-    // Mode vérification
+    // Mode vérification avec limiteur de tentatives
     setState(() => _isLoading = true);
     final ok = await SecurityService.instance.verifyPin(entered);
     if (!mounted) return;
     if (ok) {
+      await _reinitialiserTentatives();
+      if (!mounted) return;
       Navigator.of(context).pop(true);
     } else {
-      setState(() {
-        _isLoading = false;
-        _digits.clear();
-        _errorMessage = 'PIN incorrect. Réessayez.';
-      });
+      await _gererTentativeEchouee();
     }
   }
 
@@ -186,6 +277,8 @@ class _PinDialogState extends State<PinDialog> {
             // Clavier numérique
             if (_isLoading)
               const CircularProgressIndicator()
+            else if (_isLocked)
+              const SizedBox.shrink()
             else
               _buildKeypad(theme),
             const SizedBox(height: 16),
@@ -214,12 +307,12 @@ class _PinDialogState extends State<PinDialog> {
               if (key.isEmpty) return const SizedBox(width: 72, height: 56);
               if (key == 'del') {
                 return _PinKey(
-                  onTap: _onDelete,
+                  onTap: _supprimerDernierChiffre,
                   child: const Icon(Icons.backspace_outlined, size: 20),
                 );
               }
               return _PinKey(
-                onTap: () => _onDigitTap(key),
+                onTap: () => _ajouterChiffre(key),
                 child: Text(
                   key,
                   style: theme.textTheme.titleMedium?.copyWith(

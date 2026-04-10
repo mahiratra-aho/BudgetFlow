@@ -20,102 +20,70 @@ class EncryptionService {
 
   final _aesGcm = AesGcm.with256bits();
 
-  Uint8List generateSalt() {
+  Uint8List genererSel() {
     final random = Random.secure();
     return Uint8List.fromList(
       List<int>.generate(_kSaltLength, (_) => random.nextInt(256)),
     );
   }
 
-  Future<SecretKey> deriveKey(String password, Uint8List salt) async {
+  Future<SecretKey> deriverCle(String motDePasse, Uint8List sel) async {
     return _pbkdf2.deriveKey(
-      secretKey: SecretKey(utf8.encode(password)),
-      nonce: salt,
+      secretKey: SecretKey(utf8.encode(motDePasse)),
+      nonce: sel,
     );
   }
 
-  Future<Map<String, dynamic>> encrypt(
-    List<int> plaintext,
-    String password,
+  Future<Map<String, dynamic>> chiffrer(
+    List<int> texteClair,
+    String motDePasse,
   ) async {
-    final normalized = _normalizePlaintext(plaintext);
-    final salt = generateSalt();
-    final key = await deriveKey(password, salt);
-    final secretBox = await _aesGcm.encrypt(
-      normalized.bytes,
-      secretKey: key,
-    );
+    final sel = genererSel();
+    final cle = await deriverCle(motDePasse, sel);
+    final boiteSecrete = await _aesGcm.encrypt(texteClair, secretKey: cle);
 
     return {
       'v': _kFormatVersion,
       'algo': 'aes-gcm-256',
       'kdf': 'pbkdf2-hmac-sha256',
-      'encoding': normalized.encoding,
       'iterations': _kIterations,
-      'salt': base64.encode(salt),
-      'nonce': base64.encode(secretBox.nonce),
-      'mac': base64.encode(secretBox.mac.bytes),
-      'ct': base64.encode(secretBox.cipherText),
+      'salt': base64.encode(sel),
+      'nonce': base64.encode(boiteSecrete.nonce),
+      'mac': base64.encode(boiteSecrete.mac.bytes),
+      'ct': base64.encode(boiteSecrete.cipherText),
     };
   }
 
-  Future<List<int>> decrypt(
-    Map<String, dynamic> envelope,
-    String password,
+  Future<List<int>> dechiffrer(
+    Map<String, dynamic> enveloppe,
+    String motDePasse,
   ) async {
-    final version = envelope['v'] as int? ?? 1;
+    final version = enveloppe['v'] as int? ?? 1;
     if (version != _kFormatVersion) {
       throw const EncryptionException('Version de format non supportée.');
     }
 
-    final encoding = envelope['encoding'] as String? ?? 'bytes';
-    final salt = base64.decode(envelope['salt'] as String);
-    final nonce = base64.decode(envelope['nonce'] as String);
-    final mac = base64.decode(envelope['mac'] as String);
-    final ciphertext = base64.decode(envelope['ct'] as String);
+    final sel = base64.decode(enveloppe['salt'] as String);
+    final nonce = base64.decode(enveloppe['nonce'] as String);
+    final mac = base64.decode(enveloppe['mac'] as String);
+    final texteChiffre = base64.decode(enveloppe['ct'] as String);
 
-    final key = await deriveKey(password, Uint8List.fromList(salt));
+    final cle = await deriverCle(motDePasse, Uint8List.fromList(sel));
 
-    final secretBox = SecretBox(
-      ciphertext,
+    final boiteSecrete = SecretBox(
+      texteChiffre,
       nonce: nonce,
       mac: Mac(mac),
     );
 
     try {
-      final decrypted = await _aesGcm.decrypt(secretBox, secretKey: key);
-      if (encoding == 'utf8-string') {
-        return utf8.decode(decrypted).codeUnits;
-      }
-      return decrypted;
+      return await _aesGcm.decrypt(boiteSecrete, secretKey: cle);
     } on SecretBoxAuthenticationError catch (_) {
       throw const EncryptionException(
         'Mot de passe incorrect ou fichier corrompu.',
       );
     }
   }
-
-  _NormalizedPlaintext _normalizePlaintext(List<int> plaintext) {
-    final hasNonByteValue = plaintext.any((value) => value < 0 || value > 255);
-    if (!hasNonByteValue) {
-      return _NormalizedPlaintext(
-        bytes: List<int>.from(plaintext),
-        encoding: 'bytes',
-      );
-    }
-
-    return _NormalizedPlaintext(
-      bytes: utf8.encode(String.fromCharCodes(plaintext)),
-      encoding: 'utf8-string',
-    );
-  }
-}
-
-class _NormalizedPlaintext {
-  final List<int> bytes;
-  final String encoding;
-
-  const _NormalizedPlaintext({required this.bytes, required this.encoding});
 }
 
 class EncryptionException implements Exception {

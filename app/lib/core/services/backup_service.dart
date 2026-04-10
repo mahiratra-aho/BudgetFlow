@@ -72,7 +72,7 @@ class BackupService {
   final _encryption = EncryptionService.instance;
   final _merge = MergeService.instance;
 
-  Future<BackupPayload> readAllData(AppDatabase db) async {
+  Future<BackupPayload> lireToutesLesDonnees(AppDatabase db) async {
     final database = await db.database;
     final txRows = await database.query(AppDatabase.tableTransactions);
     final catRows = await database.query(AppDatabase.tableCategories);
@@ -90,53 +90,71 @@ class BackupService {
     );
   }
 
-  Future<List<int>> createEncryptedBackup(BackupPayload payload, String password) async {
+  Future<List<int>> creerSauvegardeChiffree(
+      BackupPayload payload, String password) async {
     final plaintext = utf8.encode(jsonEncode(payload.toJson()));
-    final envelope = await _encryption.encrypt(plaintext, password);
+    final envelope = await _encryption.chiffrer(plaintext, password);
     return utf8.encode(jsonEncode(envelope));
   }
 
-  Future<BackupPayload> decryptBackup(List<int> fileBytes, String password) async {
+  Future<BackupPayload> dechiffrerSauvegarde(
+      List<int> fileBytes, String password) async {
     final envelope = jsonDecode(utf8.decode(fileBytes)) as Map<String, dynamic>;
-    final plaintext = await _encryption.decrypt(envelope, password);
-    final payloadJson = jsonDecode(utf8.decode(plaintext)) as Map<String, dynamic>;
+    final plaintext = await _encryption.dechiffrer(envelope, password);
+    final payloadJson =
+        jsonDecode(utf8.decode(plaintext)) as Map<String, dynamic>;
     return BackupPayload.fromJson(payloadJson);
   }
 
-  Future<MergeStats> mergeIntoDatabase(AppDatabase db, BackupPayload incoming) async {
+  Future<MergeStats> fusionnerDansBase(
+      AppDatabase db, BackupPayload incoming) async {
     final database = await db.database;
-    final existingTx = await database.query(AppDatabase.tableTransactions)
+    final existingTx = await database
+        .query(AppDatabase.tableTransactions)
         .then((rows) => rows.map(TransactionModele.fromMap).toList());
-    final existingCat = await database.query(AppDatabase.tableCategories)
+    final existingCat = await database
+        .query(AppDatabase.tableCategories)
         .then((rows) => rows.map(CategorieModele.fromMap).toList());
-    final existingBudgets = await database.query(AppDatabase.tableBudgets)
+    final existingBudgets = await database
+        .query(AppDatabase.tableBudgets)
         .then((rows) => rows.map(BudgetModele.fromMap).toList());
-    final existingGoals = await database.query(AppDatabase.tableObjectifs)
+    final existingGoals = await database
+        .query(AppDatabase.tableObjectifs)
         .then((rows) => rows.map(ObjectifModele.fromMap).toList());
-    final existingRecurring = await database.query(AppDatabase.tableRepetitifs)
+    final existingRecurring = await database
+        .query(AppDatabase.tableRepetitifs)
         .then((rows) => rows.map(RecurrenceModele.fromMap).toList());
 
-    final txToUpsert = _merge.mergeTransactions(existingTx, incoming.transactions);
-    final catToUpsert = _merge.mergeCategories(existingCat, incoming.categories);
-    final budgetsToUpsert = _merge.mergeBudgets(existingBudgets, incoming.budgets);
+    final txToUpsert =
+        _merge.mergeTransactions(existingTx, incoming.transactions);
+    final catToUpsert =
+        _merge.mergeCategories(existingCat, incoming.categories);
+    final budgetsToUpsert =
+        _merge.mergeBudgets(existingBudgets, incoming.budgets);
     final goalsToUpsert = _merge.mergeGoals(existingGoals, incoming.goals);
-    final recurringToUpsert = _merge.mergeRecurring(existingRecurring, incoming.recurring);
+    final recurringToUpsert =
+        _merge.mergeRecurring(existingRecurring, incoming.recurring);
 
     await database.transaction((txn) async {
       for (final item in txToUpsert) {
-        await txn.insert(AppDatabase.tableTransactions, item.toMap(), conflictAlgorithm: ConflictAlgorithm.replace);
+        await txn.insert(AppDatabase.tableTransactions, item.toMap(),
+            conflictAlgorithm: ConflictAlgorithm.replace);
       }
       for (final item in catToUpsert) {
-        await txn.insert(AppDatabase.tableCategories, item.toMap(), conflictAlgorithm: ConflictAlgorithm.replace);
+        await txn.insert(AppDatabase.tableCategories, item.toMap(),
+            conflictAlgorithm: ConflictAlgorithm.replace);
       }
       for (final item in budgetsToUpsert) {
-        await txn.insert(AppDatabase.tableBudgets, item.toMap(), conflictAlgorithm: ConflictAlgorithm.replace);
+        await txn.insert(AppDatabase.tableBudgets, item.toMap(),
+            conflictAlgorithm: ConflictAlgorithm.replace);
       }
       for (final item in goalsToUpsert) {
-        await txn.insert(AppDatabase.tableObjectifs, item.toMap(), conflictAlgorithm: ConflictAlgorithm.replace);
+        await txn.insert(AppDatabase.tableObjectifs, item.toMap(),
+            conflictAlgorithm: ConflictAlgorithm.replace);
       }
       for (final item in recurringToUpsert) {
-        await txn.insert(AppDatabase.tableRepetitifs, item.toMap(), conflictAlgorithm: ConflictAlgorithm.replace);
+        await txn.insert(AppDatabase.tableRepetitifs, item.toMap(),
+            conflictAlgorithm: ConflictAlgorithm.replace);
       }
     });
 
@@ -149,9 +167,10 @@ class BackupService {
     );
   }
 
-  String backupFileName() {
+  String nomFichierSauvegarde() {
     final now = DateTime.now();
-    final date = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+    final date =
+        '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
     return 'budgetflow_backup_$date.bfbackup';
   }
 }

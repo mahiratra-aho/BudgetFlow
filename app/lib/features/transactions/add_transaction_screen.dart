@@ -3,13 +3,12 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/theme/app_theme.dart';
-import '../../core/security/security_service.dart';
-import '../../core/security/pin_dialog.dart';
 import '../../core/widgets/primary_button.dart';
 import '../../data/models/transaction.dart';
 import '../../data/models/category.dart';
 import '../../core/providers/repositories.dart';
-import '../onboarding/dashboard/dashboard_viewmodel.dart';
+import '../../features/dashboard/dashboard_viewmodel.dart';
+import '../../features/stats/stats_viewmodel.dart';
 import 'transactions_viewmodel.dart';
 
 class AddTransactionScreen extends ConsumerStatefulWidget {
@@ -79,28 +78,6 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       return;
     }
 
-    // ── Vérification de sécurité ──────────────────────────────────────────
-    final securityEnabled = await SecurityService.instance.isSecurityEnabled();
-    if (securityEnabled) {
-      bool authenticated = false;
-      final canBio = await SecurityService.instance.isBiometricAvailable();
-      if (canBio) {
-        authenticated =
-            await SecurityService.instance.authenticateWithBiometric(
-          reason: 'Confirmer cette transaction',
-        );
-      }
-      if (!authenticated) {
-        if (!mounted) return;
-        authenticated = await PinDialog.show(
-          context,
-          title: 'Code PIN',
-          subtitle: 'Saisissez votre PIN pour confirmer',
-        );
-      }
-      if (!authenticated) return;
-    }
-
     setState(() => _isSaving = true);
     try {
       final repoTransactions = ref.read(repoTransactionProvider);
@@ -132,9 +109,10 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
         await repoTransactions.ajouter(tx);
       }
 
-      // Rafraîchir le dashboard et les transactions
+      // Rafraîchir le dashboard, les statistiques et les transactions
       ref.invalidate(dashboardViewModelProvider);
       ref.invalidate(transactionsViewModelProvider);
+      ref.invalidate(statsViewModelProvider);
 
       if (mounted) context.pop();
     } catch (e) {

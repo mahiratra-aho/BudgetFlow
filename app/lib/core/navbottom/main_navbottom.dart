@@ -10,13 +10,8 @@ class MainShell extends StatelessWidget {
 
   static const _tabs = [
     (icon: Icons.home_rounded, label: 'Accueil', route: AppRoutes.dashboard),
-    (
-      icon: Icons.swap_vert_circle_rounded,
-      label: 'Transactions',
-      route: AppRoutes.transactions
-    ),
     (icon: Icons.pie_chart_rounded, label: 'Budgets', route: AppRoutes.budgets),
-    (icon: Icons.savings_rounded, label: 'Objectifs', route: AppRoutes.goals),
+    (icon: Icons.savings_rounded, label: 'Épargnes', route: AppRoutes.goals),
     (
       icon: Icons.settings_rounded,
       label: 'Paramètres',

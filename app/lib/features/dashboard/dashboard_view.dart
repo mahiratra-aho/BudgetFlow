@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/routing/app_router.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/date_utils.dart';
+import '../../core/utils/excel_export_helper.dart';
 import 'dashboard_viewmodel.dart';
 import 'widgets/tableau_de_bord_widgets.dart';
 
@@ -47,6 +48,11 @@ class DashboardView extends ConsumerWidget {
                   ],
                 ),
                 actions: [
+                  IconButton(
+                    icon: const Icon(Icons.download_rounded),
+                    tooltip: 'Exporter Excel',
+                    onPressed: () => afficherFluxExportExcel(context, ref),
+                  ),
                   IconButton(
                     icon: const Icon(Icons.bar_chart_rounded),
                     tooltip: 'Statistiques',

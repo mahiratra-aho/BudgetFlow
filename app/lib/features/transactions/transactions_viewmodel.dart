@@ -2,6 +2,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/models/transaction.dart';
 import '../../data/models/category.dart';
 import '../../core/providers/repositories.dart';
+import '../dashboard/dashboard_viewmodel.dart';
+import '../stats/stats_viewmodel.dart';
 
 typedef TransactionsState = EtatTransactions;
 
@@ -129,6 +131,8 @@ class TransactionsViewModel extends AsyncNotifier<EtatTransactions> {
   Future<void> deleteTransaction(String id) async {
     final repoTransactions = ref.read(repoTransactionProvider);
     await repoTransactions.supprimerLogiquement(id);
+    ref.invalidate(dashboardViewModelProvider);
+    ref.invalidate(statsViewModelProvider);
     await refresh();
   }
 }

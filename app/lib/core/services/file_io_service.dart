@@ -11,45 +11,54 @@ class FileIoService {
   static final FileIoService instance = FileIoService._();
   FileIoService._();
 
-  Future<void> saveAndShare({
-    required String fileName,
-    required List<int> bytes,
-    required String mimeType,
-    String? subject,
+  Future<void> enregistrerEtPartager({
+    required String nomFichier,
+    required List<int> octets,
+    required String typeMime,
+    String? sujet,
+    String? sousDossier,
   }) async {
     if (kIsWeb) {
-      triggerWebDownload(
-        fileName: fileName,
-        bytes: Uint8List.fromList(bytes),
-        mimeType: mimeType,
+      declencherTelechargementWeb(
+        nomFichier: nomFichier,
+        octets: Uint8List.fromList(octets),
+        typeMime: typeMime,
       );
       return;
     }
-    final dir = await getApplicationDocumentsDirectory();
-    final filePath = '${dir.path}/$fileName';
-    await File(filePath).writeAsBytes(bytes);
+    final dossierBase = await getApplicationDocumentsDirectory();
+    final Directory dossierCible = sousDossier != null
+        ? Directory('${dossierBase.path}/$sousDossier')
+        : dossierBase;
+    if (sousDossier != null) {
+      await dossierCible.create(recursive: true);
+    }
+    final cheminFichier = '${dossierCible.path}/$nomFichier';
+    await File(cheminFichier).writeAsBytes(octets);
     await Share.shareXFiles(
-      [XFile(filePath, mimeType: mimeType)],
-      subject: subject ?? fileName,
+      [XFile(cheminFichier, mimeType: typeMime)],
+      subject: sujet ?? nomFichier,
     );
   }
 
-  Future<PickedFile?> pickFile({List<String>? extensions}) async {
-    final result = await FilePicker.platform.pickFiles(
-      type: extensions != null ? FileType.custom : FileType.any,
-      allowedExtensions: extensions,
+  Future<PickedFile?> choisirFichier({
+    List<String>? extensionsAutorisees,
+  }) async {
+    final resultat = await FilePicker.platform.pickFiles(
+      type: extensionsAutorisees != null ? FileType.custom : FileType.any,
+      allowedExtensions: extensionsAutorisees,
       withData: true,
     );
-    if (result == null || result.files.isEmpty) return null;
-    final file = result.files.first;
-    final data = file.bytes;
-    if (data == null) return null;
-    return PickedFile(name: file.name, bytes: data);
+    if (resultat == null || resultat.files.isEmpty) return null;
+    final fichier = resultat.files.first;
+    final octets = fichier.bytes;
+    if (octets == null) return null;
+    return PickedFile(nom: fichier.name, octets: octets);
   }
 }
 
 class PickedFile {
-  final String name;
-  final Uint8List bytes;
-  const PickedFile({required this.name, required this.bytes});
+  final String nom;
+  final Uint8List octets;
+  const PickedFile({required this.nom, required this.octets});
 }

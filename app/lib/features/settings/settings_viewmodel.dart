@@ -79,154 +79,174 @@ class SettingsViewModel extends AsyncNotifier<SettingsState> {
     await prefs.setBool('onboarding_done', false);
   }
 
-  Future<void> exportExcel({required int month, required int year}) async {
+  Future<void> exporterExcel({required int mois, required int annee}) async {
     final List<TransactionModele> transactions =
-        await ref.read(repoTransactionProvider).obtenirParMois(month, year);
+        await ref.read(repoTransactionProvider).obtenirParMois(mois, annee);
     final List<CategorieModele> categories =
         await ref.read(repoCategorieProvider).obtenirToutes();
     final List<BudgetModele> budgets =
-        await ref.read(repoBudgetProvider).obtenirParMois(month, year);
-    final List<ObjectifModele> goals =
+        await ref.read(repoBudgetProvider).obtenirParMois(mois, annee);
+    final List<ObjectifModele> objectifs =
         await ref.read(repoObjectifProvider).obtenirTous();
-    final List<RecurrenceModele> recurring =
-        await ref.read(repoRepetitifProvider).obtenirToutes(activesSeulement: false);
+    final List<RecurrenceModele> recurrences = await ref
+        .read(repoRepetitifProvider)
+        .obtenirToutes(activesSeulement: false);
 
-    final data = ExcelExportData(
-      month: month,
-      year: year,
+    final donneesExport = ExcelExportData(
+      month: mois,
+      year: annee,
       transactions: transactions,
       categories: categories,
       budgets: budgets,
-      goals: goals,
-      recurring: recurring,
+      goals: objectifs,
+      recurring: recurrences,
     );
 
-    final bytes = ExcelService.instance.exportToExcel(data);
-    final fileName = ExcelService.instance.excelFileName(month, year);
-    await FileIoService.instance.saveAndShare(
-      fileName: fileName,
-      bytes: bytes,
-      mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      subject: 'Export BudgetFlow $month/$year',
+    final octets = ExcelService.instance.exporterVersExcel(donneesExport);
+    final nomFichier = ExcelService.instance.nomFichierExcel(mois, annee);
+    await FileIoService.instance.enregistrerEtPartager(
+      nomFichier: nomFichier,
+      octets: octets,
+      typeMime:
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      sujet: 'Export BudgetFlow $mois/$annee',
+      sousDossier: 'BudgetFlow/Export',
     );
   }
 
-  Future<int> applyExcelImport(ExcelImportPreview preview) async {
+  Future<int> appliquerImportExcel(ExcelImportPreview apercu) async {
     // Charger les catégories existantes (nom → modèle) pour éviter les doublons.
-    final existingCats = await ref.read(repoCategorieProvider).obtenirToutes();
-    final catByName = <String, CategorieModele>{
-      for (final c in existingCats) c.name.toLowerCase(): c,
+    final categoriesExistantes =
+        await ref.read(repoCategorieProvider).obtenirToutes();
+    final categorieParNom = <String, CategorieModele>{
+      for (final categorie in categoriesExistantes)
+        categorie.name.toLowerCase(): categorie,
     };
-    var count = 0;
+    var totalImporte = 0;
 
     // Utilitaire : trouver ou créer une catégorie par nom.
-    Future<CategorieModele?> findOrCreateCategory(
-        String name, String type) async {
-      if (name.isEmpty) return null;
-      final key = name.toLowerCase();
-      if (catByName.containsKey(key)) return catByName[key];
-      final newCat = CategorieModele.create(
-        name: name,
+    Future<CategorieModele?> trouverOuCreerCategorie(
+      String nom,
+      String type,
+    ) async {
+      if (nom.isEmpty) return null;
+      final cle = nom.toLowerCase();
+      if (categorieParNom.containsKey(cle)) return categorieParNom[cle];
+      final nouvelleCategorie = CategorieModele.create(
+        name: nom,
         icon: 'label',
         colorValue: 0xFF607D8B,
         type: type,
       );
-      await ref.read(repoCategorieProvider).ajouter(newCat);
-      catByName[key] = newCat;
-      return newCat;
+      await ref.read(repoCategorieProvider).ajouter(nouvelleCategorie);
+      categorieParNom[cle] = nouvelleCategorie;
+      return nouvelleCategorie;
     }
 
     // Transactions
-    for (final t in preview.transactions) {
-      final catName = (t['categorie'] as String?) ?? '';
-      final typeStr = t['type'] as String? ?? 'expense';
-      final cat = await findOrCreateCategory(catName, typeStr);
-      if (cat == null) continue;
+    for (final transactionMap in apercu.transactions) {
+      final nomCategorie = (transactionMap['categorie'] as String?) ?? '';
+      final typeTransaction = transactionMap['type'] as String? ?? 'expense';
+      final categorie = await trouverOuCreerCategorie(
+        nomCategorie,
+        typeTransaction,
+      );
+      if (categorie == null) continue;
 
       // Analyser la date au format jj/mm/aaaa
-      DateTime? date;
-      final dateStr = t['date'] as String?;
-      if (dateStr != null && dateStr.contains('/')) {
-        final parts = dateStr.split('/');
-        if (parts.length == 3) {
-          date = DateTime.tryParse(
-            '${parts[2]}-${parts[1].padLeft(2, '0')}-${parts[0].padLeft(2, '0')}',
+      DateTime? dateTransaction;
+      final dateTexte = transactionMap['date'] as String?;
+      if (dateTexte != null && dateTexte.contains('/')) {
+        final morceaux = dateTexte.split('/');
+        if (morceaux.length == 3) {
+          dateTransaction = DateTime.tryParse(
+            '${morceaux[2]}-${morceaux[1].padLeft(2, '0')}-${morceaux[0].padLeft(2, '0')}',
           );
         }
       }
 
-      final note = (t['note'] as String?) ?? '';
+      final note = (transactionMap['note'] as String?) ?? '';
       final transaction = TransactionModele.create(
-        title: (t['titre'] as String?) ?? '',
-        amount: (t['montant'] as num? ?? 0).toDouble(),
-        type: typeStr == 'income'
+        title: (transactionMap['titre'] as String?) ?? '',
+        amount: (transactionMap['montant'] as num? ?? 0).toDouble(),
+        type: typeTransaction == 'income'
             ? TypeTransaction.income
             : TypeTransaction.expense,
-        categoryId: cat.id,
+        categoryId: categorie.id,
         note: note.isEmpty ? null : note,
-        date: date,
+        date: dateTransaction,
       );
       await ref.read(repoTransactionProvider).ajouter(transaction);
-      count++;
+      totalImporte++;
     }
 
     // Budgets
-    final now = DateTime.now();
-    for (final b in preview.budgets) {
-      final catName = (b['categorie'] as String?) ?? '';
-      final cat = await findOrCreateCategory(catName, 'both');
-      if (cat == null) continue;
+    final maintenant = DateTime.now();
+    for (final budgetMap in apercu.budgets) {
+      final nomCategorie = (budgetMap['categorie'] as String?) ?? '';
+      final categorie = await trouverOuCreerCategorie(nomCategorie, 'both');
+      if (categorie == null) continue;
       final budget = BudgetModele.create(
-        categoryId: cat.id,
-        amount: (b['montant'] as num? ?? 0).toDouble(),
-        month: b['mois'] as int? ?? preview.month ?? now.month,
-        year: b['annee'] as int? ?? preview.year ?? now.year,
+        categoryId: categorie.id,
+        amount: (budgetMap['montant'] as num? ?? 0).toDouble(),
+        month: budgetMap['mois'] as int? ?? apercu.month ?? maintenant.month,
+        year: budgetMap['annee'] as int? ?? apercu.year ?? maintenant.year,
       );
       await ref.read(repoBudgetProvider).ajouter(budget);
-      count++;
+      totalImporte++;
     }
 
     // Objectifs
-    for (final g in preview.goals) {
-      final goal = ObjectifModele.create(
-        name: (g['nom'] as String?) ?? '',
-        targetAmount: (g['montant_cible'] as num? ?? 0).toDouble(),
-        currentAmount: (g['montant_actuel'] as num? ?? 0).toDouble(),
+    for (final objectifMap in apercu.goals) {
+      final objectif = ObjectifModele.create(
+        name: (objectifMap['nom'] as String?) ?? '',
+        targetAmount: (objectifMap['montant_cible'] as num? ?? 0).toDouble(),
+        currentAmount: (objectifMap['montant_actuel'] as num? ?? 0).toDouble(),
         icon: 'flag',
         colorValue: 0xFF4CAF50,
       );
-      await ref.read(repoObjectifProvider).ajouter(goal);
-      count++;
+      await ref.read(repoObjectifProvider).ajouter(objectif);
+      totalImporte++;
     }
 
-    return count;
+    return totalImporte;
   }
 
-  Future<ExcelImportPreview?> pickAndPreviewExcel() async {
-    final picked = await FileIoService.instance.pickFile(extensions: ['xlsx']);
-    if (picked == null) return null;
-    return ExcelService.instance.importFromExcel(picked.bytes);
+  Future<ExcelImportPreview?> choisirEtPrevisualiserExcel() async {
+    final fichierChoisi = await FileIoService.instance.choisirFichier(
+      extensionsAutorisees: ['xlsx'],
+    );
+    if (fichierChoisi == null) return null;
+    return ExcelService.instance.importerDepuisExcel(fichierChoisi.octets);
   }
 
-  Future<void> exportBackup(String password) async {
+  Future<void> exporterSauvegarde(String motDePasse) async {
     final db = AppDatabase.instance;
-    final payload = await BackupService.instance.readAllData(db);
-    final bytes = await BackupService.instance.createEncryptedBackup(payload, password);
-    final fileName = BackupService.instance.backupFileName();
-    await FileIoService.instance.saveAndShare(
-      fileName: fileName,
-      bytes: bytes,
-      mimeType: 'application/octet-stream',
-      subject: 'Sauvegarde BudgetFlow',
+    final donnees = await BackupService.instance.lireToutesLesDonnees(db);
+    final octets = await BackupService.instance.creerSauvegardeChiffree(
+      donnees,
+      motDePasse,
+    );
+    final nomFichier = BackupService.instance.nomFichierSauvegarde();
+    await FileIoService.instance.enregistrerEtPartager(
+      nomFichier: nomFichier,
+      octets: octets,
+      typeMime: 'application/octet-stream',
+      sujet: 'Sauvegarde BudgetFlow',
     );
   }
 
-  Future<MergeStats> importAndMergeBackup(String password) async {
-    final picked = await FileIoService.instance.pickFile(extensions: ['bfbackup']);
-    if (picked == null) throw Exception('Aucun fichier sélectionné.');
+  Future<MergeStats> importerEtFusionnerSauvegarde(String motDePasse) async {
+    final fichierChoisi = await FileIoService.instance.choisirFichier(
+      extensionsAutorisees: ['bfbackup'],
+    );
+    if (fichierChoisi == null) throw Exception('Aucun fichier sélectionné.');
     final db = AppDatabase.instance;
-    final payload = await BackupService.instance.decryptBackup(picked.bytes, password);
-    return BackupService.instance.mergeIntoDatabase(db, payload);
+    final donnees = await BackupService.instance.dechiffrerSauvegarde(
+      fichierChoisi.octets,
+      motDePasse,
+    );
+    return BackupService.instance.fusionnerDansBase(db, donnees);
   }
 }
 

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-// Bienvenue dans mes couleurs, typographies et styles communs
+/// Palette de couleurs BudgetFlow
 abstract class AppColors {
   static const Color primary = Color(0xFFFF69B4); // Rose chaud
   static const Color secondary = Color(0xFF87CEFA); // Bleu ciel

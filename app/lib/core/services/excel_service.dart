@@ -57,25 +57,25 @@ class ExcelService {
   static const String _colorHeaderViolet = 'FFDDA0DD';
   static const String _colorBlack = 'FF000000';
 
-  List<int> exportToExcel(ExcelExportData data) {
+  List<int> exporterVersExcel(ExcelExportData donnees) {
     final excel = Excel.createExcel();
 
     // Remove default Sheet1
     excel.delete('Sheet1');
 
-    _buildSummarySheet(excel, data);
-    _buildRevenusSheet(excel, data);
-    _buildDepensesSheet(excel, data);
-    _buildBudgetsSheet(excel, data);
-    _buildObjectifsSheet(excel, data);
+    _buildSummarySheet(excel, donnees);
+    _buildRevenusSheet(excel, donnees);
+    _buildDepensesSheet(excel, donnees);
+    _buildBudgetsSheet(excel, donnees);
+    _buildObjectifsSheet(excel, donnees);
 
-    final bytes = excel.save();
-    return bytes ?? [];
+    final octets = excel.save();
+    return octets ?? [];
   }
 
-  String excelFileName(int month, int year) {
-    final m = month.toString().padLeft(2, '0');
-    return 'budgetflow_${year}_$m.xlsx';
+  String nomFichierExcel(int mois, int annee) {
+    final moisTexte = mois.toString().padLeft(2, '0');
+    return 'budgetflow_${annee}_$moisTexte.xlsx';
   }
 
   void _buildSummarySheet(Excel excel, ExcelExportData data) {
@@ -237,14 +237,18 @@ class ExcelService {
     return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
   }
 
-  ExcelImportPreview importFromExcel(List<int> bytes, {int? month, int? year}) {
-    final excel = Excel.decodeBytes(bytes);
+  ExcelImportPreview importerDepuisExcel(
+    List<int> octets, {
+    int? mois,
+    int? annee,
+  }) {
+    final excel = Excel.decodeBytes(octets);
     final warnings = <String>[];
     final transactions = <Map<String, dynamic>>[];
     final budgets = <Map<String, dynamic>>[];
     final goals = <Map<String, dynamic>>[];
-    int? detectedMonth = month;
-    int? detectedYear = year;
+    int? detectedMonth = mois;
+    int? detectedYear = annee;
 
     for (final sheetName in excel.tables.keys) {
       final sheet = excel.tables[sheetName];

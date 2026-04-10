@@ -1,9 +1,9 @@
 import 'dart:typed_data';
 
-void triggerWebDownload({
-  required String fileName,
-  required Uint8List bytes,
-  required String mimeType,
+void declencherTelechargementWeb({
+  required String nomFichier,
+  required Uint8List octets,
+  required String typeMime,
 }) {
   throw UnsupportedError('Web download non disponible sur cette plateforme.');
 }

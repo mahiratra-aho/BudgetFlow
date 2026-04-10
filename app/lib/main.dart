@@ -5,6 +5,8 @@ import 'app.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialiser les données de localisation FR
   await initializeDateFormatting('fr_FR', null);
 
   runApp(
