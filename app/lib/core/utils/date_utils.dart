@@ -1,6 +1,6 @@
 import 'package:intl/intl.dart';
 
-/// Utilitaires de formatage de dates (FR)
+// Utilitaires de formatage de dates (FR)
 class AppDateUtils {
   AppDateUtils._();
 
@@ -16,7 +16,7 @@ class AppDateUtils {
   static String formatShortMonth(DateTime dt) => _shortMonth.format(dt);
   static String formatTime(DateTime dt) => _time.format(dt);
 
-  /// Libellé relatif : aujourd'hui, hier, ou date
+  // Libellé relatif : aujourd'hui, hier, ou date
   static String formatRelative(DateTime dt) {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
@@ -35,7 +35,7 @@ class AppDateUtils {
   static bool isSameDay(DateTime a, DateTime b) =>
       a.year == b.year && a.month == b.month && a.day == b.day;
 
-  /// Nom du mois (capitalisé)
+  // Nom du mois (capitalisé)
   static String monthName(int month) {
     final dt = DateTime(2024, month);
     return DateFormat('MMMM', 'fr_FR').format(dt);

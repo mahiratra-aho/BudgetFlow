@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 
-/// Carte arrondie "cute" de BudgetFlow
+// Carte arrondie "cute" de BudgetFlow
 class AppCard extends StatelessWidget {
   final Widget child;
   final EdgeInsetsGeometry? padding;
@@ -48,7 +48,7 @@ class AppCard extends StatelessWidget {
   }
 }
 
-/// Carte dégradée "cute" pour le tableau de bord
+// Carte dégradée "cute" pour le tableau de bord
 class GradientCard extends StatelessWidget {
   final Widget child;
   final List<Color> colors;

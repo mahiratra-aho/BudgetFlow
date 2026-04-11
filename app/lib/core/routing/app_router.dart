@@ -13,11 +13,14 @@ import '../../features/budgets/budgets_view.dart';
 import '../../features/goals/goals_view.dart';
 import '../../features/stats/stats_view.dart';
 import '../../features/repetitif/repetitif_view.dart';
+import '../../features/settings/manage_members_view.dart';
+import '../../features/settings/manage_payment_methods_view.dart';
 import '../../features/settings/settings_view.dart';
-import '../auth/local_auth_service.dart';
+import '../auth/auth_viewmodel.dart';
+import '../auth/local_user.dart';
 import '../navbottom/main_navbottom.dart';
 
-/// Noms des routes
+// Noms des routes
 abstract class AppRoutes {
   static const login = '/login';
   static const signup = '/signup';
@@ -31,19 +34,54 @@ abstract class AppRoutes {
   static const repetitif = '/repetitif';
   static const recurring = repetitif;
   static const settings = '/settings';
+  static const managePaymentMethods = '/settings/payment-methods';
+  static const manageMembers = '/settings/members';
 }
 
-/// Routes accessibles sans être connecté.
+// Routes accessibles sans être connecté.
 const _publicRoutes = {AppRoutes.login, AppRoutes.signup};
 
+// Notifier qui écoute authViewModelProvider et notifie GoRouter à chaque changement
+// d'état (loading → data → null) pour déclencher le recalcul du redirect.
+class _RouterNotifier extends Notifier<void> implements Listenable {
+  VoidCallback? _routerListener;
+
+  @override
+  void build() {
+    ref.listen<AsyncValue<LocalUser?>>(
+      authViewModelProvider,
+      (_, __) => _routerListener?.call(),
+    );
+  }
+
+  @override
+  void addListener(VoidCallback listener) => _routerListener = listener;
+
+  @override
+  void removeListener(VoidCallback listener) => _routerListener = null;
+}
+
+final _routerNotifierProvider =
+    NotifierProvider<_RouterNotifier, void>(_RouterNotifier.new);
+
 final routerProvider = Provider<GoRouter>((ref) {
+  final notifier = ref.watch(_routerNotifierProvider.notifier);
+
   return GoRouter(
     initialLocation: '/',
+    // Le router se rafraîchit automatiquement à chaque changement d'état auth.
+    refreshListenable: notifier,
     redirect: (context, state) async {
       final location = state.matchedLocation;
 
-      // 1. Vérifier si l'utilisateur est connecté
-      final currentUser = await LocalAuthService.instance.getCurrentUser();
+      // 1. Auth en cours de chargement (démarrage de l'app) → rester sur splash
+      //    pour éviter la race condition avec appDatabaseProvider.
+      final authState = ref.read(authViewModelProvider);
+      if (authState.isLoading) {
+        return location == '/' ? null : '/';
+      }
+
+      final currentUser = authState.valueOrNull;
       final isLoggedIn = currentUser != null;
 
       // 2. Si non connecté → rediriger vers /login (sauf routes publiques)
@@ -55,13 +93,15 @@ final routerProvider = Provider<GoRouter>((ref) {
       // 3. Si connecté sur la route splash ou une route publique → continuer vers l'app
       if (location == '/' || _publicRoutes.contains(location)) {
         final prefs = await SharedPreferences.getInstance();
-        final onboardingDone = prefs.getBool('onboarding_done') ?? false;
+        final onboardingDone =
+            prefs.getBool('onboarding_done_${currentUser.id}') ?? false;
         return onboardingDone ? AppRoutes.dashboard : AppRoutes.onboarding;
       }
 
       // 4. Connecté : gérer l'onboarding
       final prefs = await SharedPreferences.getInstance();
-      final onboardingDone = prefs.getBool('onboarding_done') ?? false;
+      final onboardingDone =
+          prefs.getBool('onboarding_done_${currentUser.id}') ?? false;
       if (!onboardingDone && location != AppRoutes.onboarding) {
         return AppRoutes.onboarding;
       }
@@ -131,6 +171,14 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.repetitif,
         builder: (_, __) => const RepetitifView(),
+      ),
+      GoRoute(
+        path: AppRoutes.managePaymentMethods,
+        builder: (_, __) => const ManagePaymentMethodsView(),
+      ),
+      GoRoute(
+        path: AppRoutes.manageMembers,
+        builder: (_, __) => const ManageMembersView(),
       ),
     ],
     errorBuilder: (context, state) => Scaffold(

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 
-/// Affichage d'un montant avec couleur automatique (revenu/dépense)
+// Affichage d'un montant avec couleur automatique (revenu/dépense)
 class AmountDisplay extends StatelessWidget {
   final double amount;
   final bool isExpense;
@@ -48,7 +48,7 @@ class AmountDisplay extends StatelessWidget {
   }
 }
 
-/// Badge de montant
+// Badge de montant
 class AmountBadge extends StatelessWidget {
   final double amount;
   final bool isExpense;
@@ -93,7 +93,7 @@ class AmountBadge extends StatelessWidget {
   }
 }
 
-/// Progression visuelle (barre animée)
+// Progression visuelle (barre animée)
 class ProgressBar extends StatelessWidget {
   final double progress; // 0.0 à 1.0
   final Color? color;

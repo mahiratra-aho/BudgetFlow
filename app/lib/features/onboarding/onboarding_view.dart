@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../core/auth/local_auth_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/routing/app_router.dart';
 import '../../core/widgets/primary_button.dart';
@@ -48,8 +49,10 @@ class _OnboardingViewState extends State<OnboardingView> {
   ];
 
   Future<void> _finish() async {
+    final user = await LocalAuthService.instance.getCurrentUser();
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('onboarding_done', true);
+    final key = user != null ? 'onboarding_done_${user.id}' : 'onboarding_done';
+    await prefs.setBool(key, true);
     if (mounted) context.go(AppRoutes.dashboard);
   }
 
@@ -146,42 +149,50 @@ class _OnboardingPageWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 32),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          // Illustration placeholder
-          Container(
-            width: 180,
-            height: 180,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: page.color.withValues(alpha: 0.12),
-            ),
-            child: Icon(
-              page.icon,
-              size: 80,
-              color: page.color,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 32),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Illustration placeholder
+                Container(
+                  width: 180,
+                  height: 180,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: page.color.withValues(alpha: 0.12),
+                  ),
+                  child: Icon(
+                    page.icon,
+                    size: 80,
+                    color: page.color,
+                  ),
+                ),
+                const SizedBox(height: 40),
+                Text(
+                  page.title,
+                  style: theme.textTheme.headlineMedium,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  page.description,
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                    height: 1.5,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 40),
-          Text(
-            page.title,
-            style: theme.textTheme.headlineMedium,
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            page.description,
-            style: theme.textTheme.bodyLarge?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-              height: 1.5,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 
-/// Chip pastel "cute"
+// Chip pastel "cute"
 class CuteChip extends StatelessWidget {
   final String label;
   final bool selected;
@@ -62,7 +62,7 @@ class CuteChip extends StatelessWidget {
   }
 }
 
-/// Chip colorée pour les catégories
+// Chip colorée pour les catégories
 class CategoryChip extends StatelessWidget {
   final String label;
   final Color color;

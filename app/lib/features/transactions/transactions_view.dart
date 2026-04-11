@@ -46,6 +46,12 @@ class TransactionsView extends ConsumerWidget {
                   .read(transactionsViewModelProvider.notifier)
                   .changeMonth(m, y),
             ),
+            _BarreRecherche(
+              query: donnees.searchQuery,
+              onChanged: (q) => ref
+                  .read(transactionsViewModelProvider.notifier)
+                  .setSearchQuery(q),
+            ),
             Expanded(
               child: RefreshIndicator(
                 onRefresh: () =>
@@ -92,6 +98,74 @@ class TransactionsView extends ConsumerWidget {
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         child: const Icon(Icons.add_rounded),
+      ),
+    );
+  }
+}
+
+class _BarreRecherche extends StatefulWidget {
+  final String query;
+  final ValueChanged<String> onChanged;
+
+  const _BarreRecherche({required this.query, required this.onChanged});
+
+  @override
+  State<_BarreRecherche> createState() => _BarreRechercheState();
+}
+
+class _BarreRechercheState extends State<_BarreRecherche> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.query);
+  }
+
+  @override
+  void didUpdateWidget(_BarreRecherche oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.query != widget.query && _controller.text != widget.query) {
+      _controller.text = widget.query;
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: TextField(
+        controller: _controller,
+        onChanged: (value) {
+          setState(() {});
+          widget.onChanged(value);
+        },
+        decoration: InputDecoration(
+          hintText: 'Rechercher une transaction…',
+          prefixIcon: const Icon(Icons.search_rounded, size: 20),
+          suffixIcon: _controller.text.isNotEmpty
+              ? IconButton(
+                  icon: const Icon(Icons.clear_rounded, size: 18),
+                  onPressed: () {
+                    _controller.clear();
+                    widget.onChanged('');
+                  },
+                )
+              : null,
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide.none,
+          ),
+          filled: true,
+        ),
       ),
     );
   }

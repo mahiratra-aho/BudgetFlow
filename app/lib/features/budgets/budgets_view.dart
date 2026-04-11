@@ -296,14 +296,44 @@ class _BudgetCard extends StatelessWidget {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Text(
-                    depasseBudget
-                        ? 'Dépassé!'
-                        : '${FormatteurMontant.formatCourt(item.reste)} Ar restant',
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: depasseBudget ? AppColors.error : AppColors.income,
+                  if (depasseBudget)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: AppColors.error.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.warning_amber_rounded,
+                              size: 12, color: AppColors.error),
+                          const SizedBox(width: 3),
+                          Text(
+                            'Dépassement',
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: AppColors.error,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  else
+                    Text(
+                      '${FormatteurMontant.formatCourt(item.reste)} Ar restant',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: AppColors.income,
+                      ),
                     ),
-                  ),
+                  if (depasseBudget)
+                    Text(
+                      '+${FormatteurMontant.formatCourt(item.spent - item.budget.amount)} Ar',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: AppColors.error,
+                      ),
+                    ),
                   Row(
                     children: [
                       InkWell(

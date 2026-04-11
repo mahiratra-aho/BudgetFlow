@@ -19,7 +19,7 @@ class BudgetAvecDepenses {
 
   double get reste => (budget.amount - spent).clamp(0, double.infinity);
 
-  /// Borne la progression entre 0 et 1 pour garder les indicateurs stables.
+  // Borne la progression entre 0 et 1 pour garder les indicateurs stables.
   double get progression =>
       budget.amount > 0 ? (spent / budget.amount).clamp(0.0, 1.0) : 0.0;
 

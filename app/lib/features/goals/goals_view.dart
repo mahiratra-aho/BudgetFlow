@@ -16,7 +16,7 @@ class GoalsView extends ConsumerWidget {
     final etat = ref.watch(goalsViewModelProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Objectifs d\'épargne')),
+      appBar: AppBar(title: const Text('Épargnes')),
       body: etat.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Erreur: $e')),
@@ -44,7 +44,7 @@ class GoalsView extends ConsumerWidget {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showAddGoalSheet(context, ref),
         icon: const Icon(Icons.add_rounded),
-        label: const Text('Nouvel objectif'),
+        label: const Text('Nouvelle épargne'),
         backgroundColor: AppColors.tertiary,
         foregroundColor: Colors.white,
       ),
@@ -270,7 +270,7 @@ class _AddGoalSheetState extends State<_AddGoalSheet> {
   Future<void> _save() async {
     if (_nameController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Veuillez saisir un nom d’objectif')),
+        const SnackBar(content: Text('Veuillez saisir un nom d’épargne')),
       );
       return;
     }
@@ -319,12 +319,12 @@ class _AddGoalSheetState extends State<_AddGoalSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Nouvel objectif', style: theme.textTheme.titleLarge),
+          Text('Nouvelle épargne', style: theme.textTheme.titleLarge),
           const SizedBox(height: 20),
           TextFormField(
             controller: _nameController,
             decoration: const InputDecoration(
-              labelText: 'Nom de l\'objectif',
+              labelText: 'Nom de l\'épargne',
               hintText: 'Ex: Vacances, Voiture...',
             ),
           ),
@@ -390,7 +390,7 @@ class _AddGoalSheetState extends State<_AddGoalSheet> {
           ),
           const SizedBox(height: 20),
           PrimaryButton(
-            label: 'Créer l\'objectif',
+            label: 'Créer l\'épargne',
             isLoading: _isSaving,
             onPressed: _save,
           ),
@@ -495,7 +495,7 @@ class _EmptyGoals extends StatelessWidget {
               size: 64, color: AppColors.disabled),
           const SizedBox(height: 16),
           Text(
-            'Aucun objectif d\'épargne',
+            'Aucune épargne',
             style: Theme.of(context)
                 .textTheme
                 .bodyLarge
@@ -505,7 +505,7 @@ class _EmptyGoals extends StatelessWidget {
           TextButton.icon(
             onPressed: onAdd,
             icon: const Icon(Icons.add_rounded),
-            label: const Text('Créer mon premier objectif'),
+            label: const Text('Créer ma première épargne'),
           ),
         ],
       ),

@@ -2,7 +2,7 @@ import 'package:uuid/uuid.dart';
 
 typedef BudgetModel = BudgetModele;
 
-/// Budget mensuel par catégorie
+// Budget mensuel par catégorie
 class BudgetModele {
   final String id;
   final String categoryId;

@@ -5,7 +5,7 @@ typedef TransactionType = TypeTransaction;
 
 enum TypeTransaction { income, expense }
 
-/// Transaction financière (revenu ou dépense)
+// Transaction financière (revenu ou dépense)
 class TransactionModele {
   final String id;
   final String title;
@@ -16,6 +16,7 @@ class TransactionModele {
   final DateTime date;
   final bool estRepetitif;
   final String? idRepetition;
+  final String? paymentMethodId;
   final DateTime updatedAt;
   final DateTime? deletedAt;
   final int version;
@@ -30,6 +31,7 @@ class TransactionModele {
     required this.date,
     required this.estRepetitif,
     this.idRepetition,
+    this.paymentMethodId,
     required this.updatedAt,
     this.deletedAt,
     required this.version,
@@ -44,6 +46,7 @@ class TransactionModele {
     DateTime? date,
     bool estRepetitif = false,
     String? idRepetition,
+    String? paymentMethodId,
   }) {
     return TransactionModele(
       id: const Uuid().v4(),
@@ -55,6 +58,7 @@ class TransactionModele {
       date: date ?? DateTime.now(),
       estRepetitif: estRepetitif,
       idRepetition: idRepetition,
+      paymentMethodId: paymentMethodId,
       updatedAt: DateTime.now(),
       version: 1,
     );
@@ -73,6 +77,7 @@ class TransactionModele {
       date: DateTime.fromMillisecondsSinceEpoch(map['date'] as int),
       estRepetitif: (map['is_recurring'] as int? ?? 0) == 1,
       idRepetition: map['recurring_id'] as String?,
+      paymentMethodId: map['payment_method_id'] as String?,
       updatedAt: DateTime.fromMillisecondsSinceEpoch(map['updated_at'] as int),
       deletedAt: map['deleted_at'] != null
           ? DateTime.fromMillisecondsSinceEpoch(map['deleted_at'] as int)
@@ -92,6 +97,7 @@ class TransactionModele {
       'date': date.millisecondsSinceEpoch,
       'is_recurring': estRepetitif ? 1 : 0,
       'recurring_id': idRepetition,
+      'payment_method_id': paymentMethodId,
       'updated_at': updatedAt.millisecondsSinceEpoch,
       'deleted_at': deletedAt?.millisecondsSinceEpoch,
       'version': version,
@@ -107,6 +113,7 @@ class TransactionModele {
     DateTime? date,
     bool? estRepetitif,
     String? idRepetition,
+    String? paymentMethodId,
     DateTime? deletedAt,
   }) {
     return TransactionModele(
@@ -119,6 +126,7 @@ class TransactionModele {
       date: date ?? this.date,
       estRepetitif: estRepetitif ?? this.estRepetitif,
       idRepetition: idRepetition ?? this.idRepetition,
+      paymentMethodId: paymentMethodId ?? this.paymentMethodId,
       updatedAt: DateTime.now(),
       deletedAt: deletedAt ?? this.deletedAt,
       version: version + 1,

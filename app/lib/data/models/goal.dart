@@ -2,7 +2,7 @@ import 'package:uuid/uuid.dart';
 
 typedef GoalModel = ObjectifModele;
 
-/// Objectif d'épargne
+// Objectif d'épargne
 class ObjectifModele {
   final String id;
   final String name;
@@ -28,7 +28,7 @@ class ObjectifModele {
     required this.version,
   });
 
-  /// Borne la progression entre 0 et 1 pour simplifier l'affichage des jauges.
+  // Borne la progression entre 0 et 1 pour simplifier l'affichage des jauges.
   double get progression =>
       targetAmount > 0 ? (currentAmount / targetAmount).clamp(0.0, 1.0) : 0.0;
 

@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-/// Modèle d'utilisateur local (stockage SharedPreferences)
+// Modèle d'utilisateur local (stockage SharedPreferences)
 class LocalUser {
   final String id;
   final String email;

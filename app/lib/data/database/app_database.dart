@@ -6,16 +6,21 @@ import 'package:sqflite/sqflite.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:sqflite_common_ffi_web/sqflite_ffi_web.dart';
 
-/// Base de données SQLite locale pour BudgetFlow.
-///
-/// Stockage:
-/// - Android/iOS : fichier SQLite natif
-/// - Desktop     : SQLite via `sqflite_common_ffi`
-/// - Web         : SQLite via `sqflite_common_ffi_web` sans worker dédié
-///                 (stockage navigateur/IndexedDB)
+// Base de données SQLite locale pour BudgetFlow.
+//
+// Chaque utilisateur dispose de son propre fichier de base de données :
+// `budgetflow_{userId}.db` (mobile/desktop) ou `budgetflow_web_{userId}.db` (web).
+//
+// Stockage:
+// - Android/iOS : fichier SQLite natif
+// - Desktop     : SQLite via `sqflite_common_ffi`
+// - Web         : SQLite via `sqflite_common_ffi_web` sans worker dédié
+//                 (stockage navigateur/IndexedDB)
 class AppDatabase {
-  AppDatabase._();
-  static final AppDatabase instance = AppDatabase._();
+  // Identifiant unique de l'utilisateur propriétaire de cette base.
+  final String userId;
+
+  AppDatabase(this.userId);
 
   Database? _database;
 
@@ -27,15 +32,14 @@ class AppDatabase {
 
   Future<Database> _initDatabase() async {
     if (kIsWeb) {
-      // Sur le Web, éviter la dépendance au worker partagé tout en gardant SQLite.
       return _openWithFactory(
         databaseFactoryFfiWebNoWebWorker,
-        'budgetflow_web.db',
+        'budgetflow_web_$userId.db',
       );
     }
 
     final docsDir = await getApplicationDocumentsDirectory();
-    final dbPath = p.join(docsDir.path, 'budgetflow.db');
+    final dbPath = p.join(docsDir.path, 'budgetflow_$userId.db');
 
     try {
       final isDesktop = defaultTargetPlatform == TargetPlatform.linux ||
@@ -85,9 +89,11 @@ class AppDatabase {
     if (count == 0) {
       await _seedDefaultCategories(db);
     }
+
+    await _seedDefaultPaymentMethods(db);
   }
 
-  static const int _kVersion = 1;
+  static const int _kVersion = 2;
 
   static const String tableCategories = 'categories';
   static const String tableTransactions = 'transactions';
@@ -95,6 +101,10 @@ class AppDatabase {
   static const String tableObjectifs = 'goals';
   static const String tableRepetitifs = 'recurring';
   static const String tableRecurrences = tableRepetitifs;
+  static const String tableMoyensPaiement = 'payment_methods';
+  static const String tableMembres = 'members';
+  static const String tablePiecesJointes = 'transaction_attachments';
+  static const String tableMembresTransaction = 'transaction_members';
 
   static const String colonneId = 'id';
   static const String colonneMisAJourLe = 'updated_at';
@@ -106,10 +116,62 @@ class AppDatabase {
   Future<void> _onCreate(Database db, int version) async {
     await _createTables(db);
     await _seedDefaultCategories(db);
+    await _seedDefaultPaymentMethods(db);
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    // Futures migrations ici
+    if (oldVersion < 2) {
+      // Nouvelles tables Phase 2A
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS $tableMoyensPaiement (
+          id          TEXT PRIMARY KEY,
+          name        TEXT NOT NULL,
+          icon        TEXT NOT NULL,
+          color_value INTEGER NOT NULL,
+          sort_order  INTEGER NOT NULL DEFAULT 0,
+          updated_at  INTEGER NOT NULL,
+          deleted_at  INTEGER,
+          version     INTEGER NOT NULL DEFAULT 1
+        )
+      ''');
+
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS $tableMembres (
+          id          TEXT PRIMARY KEY,
+          name        TEXT NOT NULL,
+          color_value INTEGER NOT NULL,
+          sort_order  INTEGER NOT NULL DEFAULT 0,
+          updated_at  INTEGER NOT NULL,
+          deleted_at  INTEGER,
+          version     INTEGER NOT NULL DEFAULT 1
+        )
+      ''');
+
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS $tablePiecesJointes (
+          id             TEXT PRIMARY KEY,
+          transaction_id TEXT NOT NULL,
+          path           TEXT NOT NULL,
+          mime_type      TEXT NOT NULL,
+          created_at     INTEGER NOT NULL
+        )
+      ''');
+
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS $tableMembresTransaction (
+          transaction_id TEXT NOT NULL,
+          member_id      TEXT NOT NULL,
+          PRIMARY KEY (transaction_id, member_id)
+        )
+      ''');
+
+      // Ajout colonne payment_method_id dans transactions
+      await db.execute(
+        'ALTER TABLE $tableTransactions ADD COLUMN payment_method_id TEXT',
+      );
+
+      await _seedDefaultPaymentMethods(db);
+    }
   }
 
   Future<void> _createTables(Database db) async {
@@ -140,6 +202,7 @@ class AppDatabase {
         date                    INTEGER NOT NULL,
         $colonneEstRepetitif    INTEGER NOT NULL DEFAULT 0,
         $colonneIdRepetition    TEXT,
+        payment_method_id       TEXT,
         updated_at              INTEGER NOT NULL,
         deleted_at              INTEGER,
         version                 INTEGER NOT NULL DEFAULT 1
@@ -197,6 +260,53 @@ class AppDatabase {
       )
     ''');
 
+    // Table moyens de paiement
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS $tableMoyensPaiement (
+        id          TEXT PRIMARY KEY,
+        name        TEXT NOT NULL,
+        icon        TEXT NOT NULL,
+        color_value INTEGER NOT NULL,
+        sort_order  INTEGER NOT NULL DEFAULT 0,
+        updated_at  INTEGER NOT NULL,
+        deleted_at  INTEGER,
+        version     INTEGER NOT NULL DEFAULT 1
+      )
+    ''');
+
+    // Table membres
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS $tableMembres (
+        id          TEXT PRIMARY KEY,
+        name        TEXT NOT NULL,
+        color_value INTEGER NOT NULL,
+        sort_order  INTEGER NOT NULL DEFAULT 0,
+        updated_at  INTEGER NOT NULL,
+        deleted_at  INTEGER,
+        version     INTEGER NOT NULL DEFAULT 1
+      )
+    ''');
+
+    // Table pièces jointes de transactions
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS $tablePiecesJointes (
+        id             TEXT PRIMARY KEY,
+        transaction_id TEXT NOT NULL,
+        path           TEXT NOT NULL,
+        mime_type      TEXT NOT NULL,
+        created_at     INTEGER NOT NULL
+      )
+    ''');
+
+    // Table membres ↔ transactions (jointure)
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS $tableMembresTransaction (
+        transaction_id TEXT NOT NULL,
+        member_id      TEXT NOT NULL,
+        PRIMARY KEY (transaction_id, member_id)
+      )
+    ''');
+
     // Index
     await db.execute(
       'CREATE INDEX IF NOT EXISTS idx_tx_date ON transactions (date DESC)',
@@ -240,6 +350,46 @@ class AppDatabase {
     for (final cat in categories) {
       await db.insert('categories', cat);
     }
+  }
+
+  Future<void> _seedDefaultPaymentMethods(Database db) async {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final moyens = [
+      _moyenPaiement('pm_especes', 'Espèces', 'payments', 0xFF4CAF50, 0, now),
+      _moyenPaiement('pm_carte', 'Carte', 'credit_card', 0xFF2196F3, 1, now),
+      _moyenPaiement(
+          'pm_mobile_money', 'Mobile Money', 'smartphone', 0xFFFF9800, 2, now),
+      _moyenPaiement(
+          'pm_virement', 'Virement', 'account_balance', 0xFF9C27B0, 3, now),
+      _moyenPaiement('pm_cheque', 'Chèque', 'edit_document', 0xFF607D8B, 4, now),
+    ];
+
+    for (final moyen in moyens) {
+      await db.insert(
+        tableMoyensPaiement,
+        moyen,
+        conflictAlgorithm: ConflictAlgorithm.ignore,
+      );
+    }
+  }
+
+  Map<String, dynamic> _moyenPaiement(
+    String id,
+    String name,
+    String icon,
+    int colorValue,
+    int sortOrder,
+    int now,
+  ) {
+    return {
+      'id': id,
+      'name': name,
+      'icon': icon,
+      'color_value': colorValue,
+      'sort_order': sortOrder,
+      'updated_at': now,
+      'version': 1,
+    };
   }
 
   Map<String, dynamic> _cat(

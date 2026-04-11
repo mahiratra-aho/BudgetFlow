@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/date_utils.dart';
@@ -14,12 +15,20 @@ class CarteBilanMensuel extends StatelessWidget {
   final double montantRevenus;
   final double montantDepenses;
   final double solde;
+  final double soldeInitial;
+  final double soldeCloture;
+  final double? surchargeManuelle;
+  final VoidCallback? onModifierSoldeInitial;
 
   const CarteBilanMensuel({
     super.key,
     required this.montantRevenus,
     required this.montantDepenses,
     required this.solde,
+    this.soldeInitial = 0,
+    this.soldeCloture = 0,
+    this.surchargeManuelle,
+    this.onModifierSoldeInitial,
   });
 
   @override
@@ -30,20 +39,72 @@ class CarteBilanMensuel extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Solde du mois',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: Colors.white70,
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Solde du mois',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: Colors.white70,
+                ),
+              ),
+              if (onModifierSoldeInitial != null)
+                InkWell(
+                  onTap: onModifierSoldeInitial,
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.edit_rounded,
+                            size: 12, color: Colors.white70),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Solde initial',
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: Colors.white70,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
           ),
           const SizedBox(height: 4),
           Text(
-            '${FormatteurMontant.formatCourt(solde)} Ar',
+            '${FormatteurMontant.formatCourt(soldeCloture)} Ar',
             style: theme.textTheme.headlineMedium?.copyWith(
               color: Colors.white,
             ),
           ),
-          const SizedBox(height: 20),
+          if (soldeInitial != 0) ...[
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Text(
+                  'Report : ${FormatteurMontant.formatCourt(soldeInitial)} Ar',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: surchargeManuelle != null
+                        ? const Color(0xFFFFE082)
+                        : Colors.white60,
+                  ),
+                ),
+                if (surchargeManuelle != null) ...[
+                  const SizedBox(width: 4),
+                  const Icon(Icons.edit_rounded,
+                      size: 11, color: Color(0xFFFFE082)),
+                ],
+              ],
+            ),
+          ],
+          const SizedBox(height: 16),
           Row(
             children: [
               Expanded(
@@ -69,6 +130,47 @@ class CarteBilanMensuel extends StatelessWidget {
       ),
     );
   }
+}
+
+// Dialogue de saisie du solde initial.
+Future<double?> showSoldeInitialDialog(
+    BuildContext context, double valeurActuelle) async {
+  final controller =
+      TextEditingController(text: valeurActuelle.toStringAsFixed(0));
+  final result = await showDialog<double>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: const Text('Modifier le solde initial'),
+      content: TextField(
+        controller: controller,
+        keyboardType:
+            const TextInputType.numberWithOptions(signed: true, decimal: false),
+        inputFormatters: [
+          FilteringTextInputFormatter.allow(RegExp(r'^-?\d*')),
+        ],
+        decoration: const InputDecoration(
+          labelText: 'Solde initial (Ar)',
+          suffixText: 'Ar',
+        ),
+        autofocus: true,
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(ctx),
+          child: const Text('Annuler'),
+        ),
+        TextButton(
+          onPressed: () {
+            final v = double.tryParse(controller.text);
+            Navigator.pop(ctx, v);
+          },
+          child: const Text('Enregistrer'),
+        ),
+      ],
+    ),
+  );
+  controller.dispose();
+  return result;
 }
 
 class _ElementResume extends StatelessWidget {
@@ -171,9 +273,11 @@ class LigneBudgetTableauDeBord extends StatelessWidget {
     final theme = Theme.of(context);
     final couleurCategorie =
         categorie != null ? Color(categorie!.colorValue) : AppColors.primary;
+    final depassement = montantDepense > budget.amount;
     final progression = budget.amount > 0
         ? (montantDepense / budget.amount).clamp(0.0, 1.0)
         : 0.0;
+    final couleurProgression = depassement ? AppColors.error : couleurCategorie;
 
     return AppCard(
       padding: const EdgeInsets.all(14),
@@ -206,20 +310,37 @@ class LigneBudgetTableauDeBord extends StatelessWidget {
                     Text(
                       '${FormatteurMontant.formatCourt(montantDepense)} / ${FormatteurMontant.formatCourt(budget.amount)} Ar',
                       style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
+                        color: depassement
+                            ? AppColors.error
+                            : theme.colorScheme.onSurfaceVariant,
                       ),
                     ),
                   ],
                 ),
               ),
-              Text(
-                '${(progression * 100).toStringAsFixed(0)}%',
-                style: theme.textTheme.labelMedium?.copyWith(
-                  color: progression >= 1.0
-                      ? AppColors.error
-                      : theme.colorScheme.onSurfaceVariant,
+              if (depassement)
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: AppColors.error.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    'Dépassement',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: AppColors.error,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                )
+              else
+                Text(
+                  '${(progression * 100).toStringAsFixed(0)}%',
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
                 ),
-              ),
             ],
           ),
           const SizedBox(height: 10),
@@ -228,10 +349,30 @@ class LigneBudgetTableauDeBord extends StatelessWidget {
             child: LinearProgressIndicator(
               value: progression,
               backgroundColor: AppColors.surface,
-              color: progression >= 1.0 ? AppColors.error : couleurCategorie,
+              color: couleurProgression,
               minHeight: 6,
             ),
           ),
+          if (depassement) ...[
+            const SizedBox(height: 4),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                const Icon(
+                  Icons.warning_amber_rounded,
+                  size: 12,
+                  color: AppColors.error,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  '+${FormatteurMontant.formatCourt(montantDepense - budget.amount)} Ar dépassés',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: AppColors.error,
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );

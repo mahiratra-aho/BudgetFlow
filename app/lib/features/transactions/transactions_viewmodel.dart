@@ -14,6 +14,7 @@ class EtatTransactions {
   final TypeTransaction? filterType;
   final int filterMonth;
   final int filterYear;
+  final String searchQuery;
   final bool isLoading;
   final String? error;
 
@@ -24,16 +25,33 @@ class EtatTransactions {
     this.filterType,
     required this.filterMonth,
     required this.filterYear,
+    this.searchQuery = '',
     this.isLoading = false,
     this.error,
   });
 
   List<TransactionModele> get transactionsFiltrees {
+    final query = searchQuery.trim().toLowerCase();
     return transactions.where((transaction) {
       if (filterType != null && transaction.type != filterType) return false;
       if (filterCategoryId != null &&
           transaction.categoryId != filterCategoryId) {
         return false;
+      }
+      if (query.isNotEmpty) {
+        final categoryName = categories
+            .where((c) => c.id == transaction.categoryId)
+            .map((c) => c.name.toLowerCase())
+            .firstOrNull ?? '';
+        final matchTitle = transaction.title.toLowerCase().contains(query);
+        final matchNote =
+            transaction.note?.toLowerCase().contains(query) ?? false;
+        final matchCategory = categoryName.contains(query);
+        final matchAmount =
+            transaction.amount.toStringAsFixed(0).contains(query);
+        if (!matchTitle && !matchNote && !matchCategory && !matchAmount) {
+          return false;
+        }
       }
       return true;
     }).toList();
@@ -46,6 +64,7 @@ class EtatTransactions {
     TypeTransaction? filterType,
     int? filterMonth,
     int? filterYear,
+    String? searchQuery,
     bool? isLoading,
     String? error,
     bool clearCategoryFilter = false,
@@ -60,6 +79,7 @@ class EtatTransactions {
       filterType: clearTypeFilter ? null : (filterType ?? this.filterType),
       filterMonth: filterMonth ?? this.filterMonth,
       filterYear: filterYear ?? this.filterYear,
+      searchQuery: searchQuery ?? this.searchQuery,
       isLoading: isLoading ?? this.isLoading,
       error: error ?? this.error,
     );
@@ -90,6 +110,7 @@ class TransactionsViewModel extends AsyncNotifier<EtatTransactions> {
       filterType: etatCourant?.filterType,
       filterMonth: mois,
       filterYear: annee,
+      searchQuery: etatCourant?.searchQuery ?? '',
     );
   }
 
@@ -126,6 +147,12 @@ class TransactionsViewModel extends AsyncNotifier<EtatTransactions> {
   Future<void> changeMonth(int month, int year) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() => _chargerDonnees(month, year));
+  }
+
+  void setSearchQuery(String query) {
+    final current = state.valueOrNull;
+    if (current == null) return;
+    state = AsyncData(current.copyWith(searchQuery: query));
   }
 
   Future<void> deleteTransaction(String id) async {

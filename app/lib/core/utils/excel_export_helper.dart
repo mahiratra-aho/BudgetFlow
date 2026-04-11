@@ -20,32 +20,29 @@ const _kMonthNames = [
   'Décembre',
 ];
 
-/// Affiche le sélecteur de mois/année, vérifie le PIN si configuré,
-/// puis lance l'export Excel automatiquement.
-Future<void> afficherFluxExportExcel(
-  BuildContext contexte,
-  WidgetRef ref,
-) async {
+// Affiche le sélecteur de mois/année, vérifie le PIN si configuré,
+// puis lance l'export Excel automatiquement.
+Future<void> showExcelExportFlow(BuildContext context, WidgetRef ref) async {
   // 1. Vérifier le PIN si configuré (indépendamment de securityEnabled)
-  final pinDefini = await SecurityService.instance.isPinSet();
-  if (pinDefini) {
-    if (!contexte.mounted) return;
-    final estVerifie = await PinDialog.show(
-      contexte,
+  final pinSet = await SecurityService.instance.isPinSet();
+  if (pinSet) {
+    if (!context.mounted) return;
+    final verified = await PinDialog.show(
+      context,
       title: 'Code PIN',
       subtitle: 'Saisissez votre PIN pour exporter',
     );
-    if (!estVerifie || !contexte.mounted) return;
+    if (!verified || !context.mounted) return;
   }
 
   // 2. Sélection du mois/année
-  final maintenant = DateTime.now();
-  int moisSelectionne = maintenant.month;
-  int anneeSelectionnee = maintenant.year;
+  final now = DateTime.now();
+  int selectedMonth = now.month;
+  int selectedYear = now.year;
 
-  if (!contexte.mounted) return;
-  final estConfirme = await showDialog<bool>(
-    context: contexte,
+  if (!context.mounted) return;
+  final confirmed = await showDialog<bool>(
+    context: context,
     builder: (ctx) => StatefulBuilder(
       builder: (ctx, setState) => AlertDialog(
         title: const Text('Exporter en Excel'),
@@ -58,7 +55,7 @@ Future<void> afficherFluxExportExcel(
               children: [
                 Expanded(
                   child: DropdownButtonFormField<int>(
-                    initialValue: moisSelectionne,
+                    initialValue: selectedMonth,
                     decoration: const InputDecoration(labelText: 'Mois'),
                     items: List.generate(
                       12,
@@ -67,19 +64,19 @@ Future<void> afficherFluxExportExcel(
                         child: Text(_kMonthNames[i]),
                       ),
                     ),
-                    onChanged: (v) => setState(() => moisSelectionne = v!),
+                    onChanged: (v) => setState(() => selectedMonth = v!),
                   ),
                 ),
                 const SizedBox(width: 12),
                 SizedBox(
                   width: 100,
                   child: TextFormField(
-                    initialValue: anneeSelectionnee.toString(),
+                    initialValue: selectedYear.toString(),
                     keyboardType: TextInputType.number,
                     decoration: const InputDecoration(labelText: 'Année'),
                     onChanged: (v) {
-                      final annee = int.tryParse(v);
-                      if (annee != null) anneeSelectionnee = annee;
+                      final y = int.tryParse(v);
+                      if (y != null) selectedYear = y;
                     },
                   ),
                 ),
@@ -101,22 +98,21 @@ Future<void> afficherFluxExportExcel(
     ),
   );
 
-  if (estConfirme != true || !contexte.mounted) return;
+  if (confirmed != true || !context.mounted) return;
 
   // 3. Lancer l'export automatiquement
   try {
-    await ref.read(settingsViewModelProvider.notifier).exporterExcel(
-          mois: moisSelectionne,
-          annee: anneeSelectionnee,
-        );
-    if (contexte.mounted) {
-      ScaffoldMessenger.of(contexte).showSnackBar(
+    await ref
+        .read(settingsViewModelProvider.notifier)
+        .exportExcel(month: selectedMonth, year: selectedYear);
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Export Excel réussi ✓')),
       );
     }
   } catch (e) {
-    if (contexte.mounted) {
-      ScaffoldMessenger.of(contexte).showSnackBar(
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Erreur export : $e')),
       );
     }

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-/// Palette de couleurs BudgetFlow
+// Palette de couleurs BudgetFlow
 abstract class AppColors {
   static const Color primary = Color(0xFFFF69B4); // Rose chaud
   static const Color secondary = Color(0xFF87CEFA); // Bleu ciel
@@ -25,7 +25,7 @@ abstract class AppColors {
   static const Color cardShadow = Color(0x14000000); // 8% noir
 }
 
-/// Thème BudgetFlow – Material 3 "cute"
+// Thème BudgetFlow – Material 3 "cute"
 class AppTheme {
   static ThemeData get light {
     final colorScheme = ColorScheme(

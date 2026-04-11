@@ -9,7 +9,6 @@ import '../../core/routing/app_router.dart';
 import '../../core/utils/excel_export_helper.dart';
 import '../../core/widgets/app_card.dart';
 import 'settings_viewmodel.dart';
-
 class SettingsView extends ConsumerWidget {
   const SettingsView({super.key});
 
@@ -120,6 +119,30 @@ class SettingsView extends ConsumerWidget {
             ),
             const SizedBox(height: 20),
 
+            // Section Gestion
+            const _SectionTitle('Gestion'),
+            AppCard(
+              child: Column(
+                children: [
+                  ListTile(
+                    leading: const Icon(Icons.payments_rounded),
+                    title: const Text('Moyens de paiement'),
+                    trailing: const Icon(Icons.chevron_right_rounded),
+                    onTap: () =>
+                        context.push(AppRoutes.managePaymentMethods),
+                  ),
+                  const Divider(indent: 56),
+                  ListTile(
+                    leading: const Icon(Icons.group_rounded),
+                    title: const Text('Membres'),
+                    trailing: const Icon(Icons.chevron_right_rounded),
+                    onTap: () => context.push(AppRoutes.manageMembers),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+
             // Section Données
             const _SectionTitle('Données'),
             AppCard(
@@ -152,7 +175,7 @@ class SettingsView extends ConsumerWidget {
                     leading: const Icon(Icons.table_view_rounded),
                     title: const Text('Exporter (Excel)'),
                     trailing: const Icon(Icons.chevron_right_rounded),
-                    onTap: () => afficherFluxExportExcel(context, ref),
+                    onTap: () => showExcelExportFlow(context, ref),
                   ),
                   const Divider(indent: 56),
                   ListTile(
@@ -198,8 +221,7 @@ class SettingsView extends ConsumerWidget {
             const _SectionTitle('Compte'),
             AppCard(
               child: ListTile(
-                leading:
-                    const Icon(Icons.logout_rounded, color: AppColors.error),
+                leading: const Icon(Icons.logout_rounded, color: AppColors.error),
                 title: const Text(
                   'Se déconnecter',
                   style: TextStyle(color: AppColors.error),
@@ -304,7 +326,7 @@ class SettingsView extends ConsumerWidget {
     try {
       final preview = await ref
           .read(settingsViewModelProvider.notifier)
-          .choisirEtPrevisualiserExcel();
+          .pickAndPreviewExcel();
       if (preview == null || !context.mounted) return;
 
       // Afficher une boîte de confirmation avec le résumé avant d'importer.
@@ -344,11 +366,10 @@ class SettingsView extends ConsumerWidget {
 
       final count = await ref
           .read(settingsViewModelProvider.notifier)
-          .appliquerImportExcel(preview);
+          .applyExcelImport(preview);
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text('Import terminé : $count élément(s) importé(s) ✓')),
+          SnackBar(content: Text('Import terminé : $count élément(s) importé(s) ✓')),
         );
       }
     } catch (e) {

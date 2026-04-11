@@ -1,7 +1,9 @@
 import 'package:sqflite/sqflite.dart';
 
 import '../database/app_database.dart';
+import '../models/member.dart';
 import '../models/transaction.dart';
+import '../models/transaction_attachment.dart';
 
 class RepoTransaction {
   final AppDatabase _baseDeDonnees;
@@ -153,5 +155,100 @@ class RepoTransaction {
       where: '${AppDatabase.colonneId} = ?',
       whereArgs: [id],
     );
+  }
+
+  // ── Membres ────────────────────────────────────────────────────────────────
+
+  /// Ajoute un membre à une transaction (lien dans la table de jointure).
+  Future<void> ajouterMembre(String transactionId, String membreId) async {
+    final baseDeDonnees = await _baseDeDonnees.database;
+    await baseDeDonnees.insert(
+      AppDatabase.tableMembresTransaction,
+      {'transaction_id': transactionId, 'member_id': membreId},
+      conflictAlgorithm: ConflictAlgorithm.ignore,
+    );
+  }
+
+  /// Supprime un membre d'une transaction.
+  Future<void> supprimerMembre(String transactionId, String membreId) async {
+    final baseDeDonnees = await _baseDeDonnees.database;
+    await baseDeDonnees.delete(
+      AppDatabase.tableMembresTransaction,
+      where: 'transaction_id = ? AND member_id = ?',
+      whereArgs: [transactionId, membreId],
+    );
+  }
+
+  /// Remplace tous les membres d'une transaction par [membreIds].
+  Future<void> definirMembres(
+    String transactionId,
+    List<String> membreIds,
+  ) async {
+    final baseDeDonnees = await _baseDeDonnees.database;
+    await baseDeDonnees.delete(
+      AppDatabase.tableMembresTransaction,
+      where: 'transaction_id = ?',
+      whereArgs: [transactionId],
+    );
+    final batch = baseDeDonnees.batch();
+    for (final membreId in membreIds) {
+      batch.insert(
+        AppDatabase.tableMembresTransaction,
+        {'transaction_id': transactionId, 'member_id': membreId},
+        conflictAlgorithm: ConflictAlgorithm.ignore,
+      );
+    }
+    await batch.commit(noResult: true);
+  }
+
+  /// Retourne les membres associés à une transaction.
+  Future<List<MembreModele>> obtenirMembres(String transactionId) async {
+    final baseDeDonnees = await _baseDeDonnees.database;
+    final lignes = await baseDeDonnees.rawQuery(
+      '''SELECT m.*
+         FROM ${AppDatabase.tableMembres} m
+         JOIN ${AppDatabase.tableMembresTransaction} tm
+           ON m.id = tm.member_id
+         WHERE tm.transaction_id = ?
+           AND m.${AppDatabase.colonneSupprimeLe} IS NULL''',
+      [transactionId],
+    );
+    return lignes.map(MembreModele.fromMap).toList();
+  }
+
+  // ── Pièces jointes ─────────────────────────────────────────────────────────
+
+  /// Enregistre une pièce jointe liée à une transaction.
+  Future<void> ajouterPieceJointe(PieceJointeModele pieceJointe) async {
+    final baseDeDonnees = await _baseDeDonnees.database;
+    await baseDeDonnees.insert(
+      AppDatabase.tablePiecesJointes,
+      pieceJointe.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  /// Supprime une pièce jointe par son identifiant.
+  Future<void> supprimerPieceJointe(String id) async {
+    final baseDeDonnees = await _baseDeDonnees.database;
+    await baseDeDonnees.delete(
+      AppDatabase.tablePiecesJointes,
+      where: '${AppDatabase.colonneId} = ?',
+      whereArgs: [id],
+    );
+  }
+
+  /// Retourne les pièces jointes d'une transaction.
+  Future<List<PieceJointeModele>> obtenirPiecesJointes(
+    String transactionId,
+  ) async {
+    final baseDeDonnees = await _baseDeDonnees.database;
+    final lignes = await baseDeDonnees.query(
+      AppDatabase.tablePiecesJointes,
+      where: 'transaction_id = ?',
+      whereArgs: [transactionId],
+      orderBy: 'created_at ASC',
+    );
+    return lignes.map(PieceJointeModele.fromMap).toList();
   }
 }

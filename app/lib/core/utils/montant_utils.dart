@@ -1,7 +1,7 @@
 class FormatteurMontant {
   const FormatteurMontant._();
 
-  /// Réduit les grands montants pour l'affichage tout en conservant leur signe.
+  // Réduit les grands montants pour l'affichage tout en conservant leur signe.
   static String formatCourt(double montant) {
     if (montant.abs() >= 1000000) {
       final valeurCompacte = (montant.abs() / 1000000).toStringAsFixed(1);

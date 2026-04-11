@@ -51,7 +51,7 @@ class DashboardView extends ConsumerWidget {
                   IconButton(
                     icon: const Icon(Icons.download_rounded),
                     tooltip: 'Exporter Excel',
-                    onPressed: () => afficherFluxExportExcel(context, ref),
+                    onPressed: () => showExcelExportFlow(context, ref),
                   ),
                   IconButton(
                     icon: const Icon(Icons.bar_chart_rounded),
@@ -73,6 +73,20 @@ class DashboardView extends ConsumerWidget {
                       montantRevenus: etat.totalIncome,
                       montantDepenses: etat.totalExpense,
                       solde: etat.balance,
+                      soldeInitial: etat.startingBalance,
+                      soldeCloture: etat.closingBalance,
+                      surchargeManuelle: etat.overrideStartingBalance,
+                      onModifierSoldeInitial: () async {
+                        final valeur = await showSoldeInitialDialog(
+                          context,
+                          etat.startingBalance,
+                        );
+                        if (valeur != null) {
+                          await ref
+                              .read(dashboardViewModelProvider.notifier)
+                              .setStartingBalanceOverride(valeur);
+                        }
+                      },
                     ),
                     const SizedBox(height: 20),
                     if (etat.budgets.isNotEmpty) ...[
@@ -93,7 +107,7 @@ class DashboardView extends ConsumerWidget {
                     ],
                     if (etat.goals.isNotEmpty) ...[
                       EnteteSectionTableauDeBord(
-                        titre: 'Objectifs en cours',
+                        titre: 'Épargnes en cours',
                         onVoirTout: () => context.go(AppRoutes.goals),
                       ),
                       const SizedBox(height: 12),

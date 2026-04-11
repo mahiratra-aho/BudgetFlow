@@ -3,12 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'local_auth_service.dart';
 import 'local_user.dart';
 
-/// État de la session : null = non connecté, LocalUser = connecté.
+// État de la session : null = non connecté, LocalUser = connecté.
 class AuthViewModel extends AsyncNotifier<LocalUser?> {
   @override
   Future<LocalUser?> build() => LocalAuthService.instance.getCurrentUser();
 
-  /// Crée un compte et met à jour l'état.
+  // Crée un compte et met à jour l'état.
   Future<void> signUp({
     required String email,
     required String password,
@@ -24,7 +24,7 @@ class AuthViewModel extends AsyncNotifier<LocalUser?> {
     );
   }
 
-  /// Connecte un utilisateur existant et met à jour l'état.
+  // Connecte un utilisateur existant et met à jour l'état.
   Future<void> signIn({
     required String email,
     required String password,
@@ -38,7 +38,7 @@ class AuthViewModel extends AsyncNotifier<LocalUser?> {
     );
   }
 
-  /// Déconnecte l'utilisateur courant.
+  // Déconnecte l'utilisateur courant.
   Future<void> signOut() async {
     state = const AsyncLoading();
     await LocalAuthService.instance.signOut();
