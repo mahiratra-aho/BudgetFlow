@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "220819353069",
+    "project_id": "kajimbolana",
+    "storage_bucket": "kajimbolana.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:220819353069:android:f0249f382987c3abb70be4",
+        "android_client_info": {
+          "package_name": "com.example.bugdetflowapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAfxU0Muu278WvD779lndJGyXdRpw-WeXg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
